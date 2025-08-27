@@ -27,6 +27,9 @@ beangulp-skandia --config skandia.toml extract  ~/Downloads/skandia.xlsx > out.b
 - Internal transfers detection and classification (e.g. “Överföring …”).
 - Configurable via a simple `skandia.toml`.
 - Provides a CLI entrypoint: `beangulp-skandia`.
+- **Optional machine learning enrichment via [`smart_importer`](https://github.com/beancount/smart_importer)**:
+  - Predict missing postings (e.g. assign counter-accounts).
+  - Predict payees from past ledger history.
 
 ## Installation
 
@@ -45,6 +48,10 @@ Requires:
 - [pandas](https://pandas.pydata.org/)
 - [openpyxl](https://openpyxl.readthedocs.io/)
 
+Optional for smart enrichment:
+- smart_importer
+- scikit-learn
+
 ## Usage
 
 You can now run the importer via the CLI entrypoint:
@@ -52,6 +59,12 @@ You can now run the importer via the CLI entrypoint:
 ```bash
 beangulp-skandia --config skandia.toml identify ~/Downloads/skandia.xlsx
 beangulp-skandia --config skandia.toml extract  ~/Downloads/skandia.xlsx > out.bean
+```
+
+With smart enrichment (requires a Beancount ledger for training):
+```bash
+beangulp-skandia --smart --ledger ~/Documents/Beancount/main.beancount \
+  --config skandia.toml extract ~/Downloads/skandia.xlsx
 ```
 
 The old developer wrapper is still available:
