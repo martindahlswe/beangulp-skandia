@@ -2,6 +2,22 @@
 
 Importer plugin for [beangulp](https://github.com/redstreet/beangulp) that reads **XLSX exports** (“Kontoutdrag”) from the Swedish bank **Skandia** and converts them into [Beancount](https://beancount.github.io/) transactions.
 
+## Quickstart
+
+```bash
+# Install in editable mode
+git clone https://github.com/martindahlswe/beangulp-skandia.git
+cd beangulp-skandia
+pip install -e .
+
+# Copy the example config and adjust it
+cp skandia.example.toml skandia.toml
+
+# Run identify or extract
+beangulp-skandia --config skandia.toml identify ~/Downloads/skandia.xlsx
+beangulp-skandia --config skandia.toml extract  ~/Downloads/skandia.xlsx > out.bean
+```
+
 ## Features
 
 - Parses Skandia’s `Kontoutdrag` XLSX format.
@@ -10,6 +26,7 @@ Importer plugin for [beangulp](https://github.com/redstreet/beangulp) that reads
 - Keyword-based counter-account rules (e.g. rent, gym, subscriptions).
 - Internal transfers detection and classification (e.g. “Överföring …”).
 - Configurable via a simple `skandia.toml`.
+- Provides a CLI entrypoint: `beangulp-skandia`.
 
 ## Installation
 
@@ -30,7 +47,14 @@ Requires:
 
 ## Usage
 
-Run the importer through `import.py`:
+You can now run the importer via the CLI entrypoint:
+
+```bash
+beangulp-skandia --config skandia.toml identify ~/Downloads/skandia.xlsx
+beangulp-skandia --config skandia.toml extract  ~/Downloads/skandia.xlsx > out.bean
+```
+
+The old developer wrapper is still available:
 
 ```bash
 python3 import.py identify ~/Downloads/skandia.xlsx
@@ -87,9 +111,11 @@ keywords = ["överföring", "overforing"]
 ## Development
 
 - `beangulp_skandia/importer.py` contains the importer class.
+- `beangulp_skandia/cli.py` provides the CLI entrypoint (`beangulp-skandia`).
 - `import.py` is a thin wrapper around [beangulp](https://github.com/redstreet/beangulp).
 - `skandia.example.toml` documents configuration.
-- Tests are not included yet; contributions welcome.
+- Tests are included in `tests/` (they generate fake XLSX, no real data).
+- Contributions welcome.
 
 ## License
 
