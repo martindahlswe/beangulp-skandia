@@ -1,0 +1,57 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.conda/
+.python-version
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+
+# Jupyter / VSCode / IDE
+.ipynb_checkpoints/
+.vscode/
+.idea/
+*.code-workspace
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Logs & caches
+*.log
+*.sqlite
+.cache/
+.mypy_cache/
+.pytest_cache/
+
+# Beancount / Fava generated or personal data
+*.bean
+*.beancount
+*.sqlite
+*.ledger
+
+# Finance exports (local, sensitive)
+*.xlsx
+*.xls
+*.csv
+*.pdf
+
+# Local config (don’t commit personal account mappings)
+skandia.toml
+
+# Archives
+*.zip
+*.tar
+*.tar.gz
+

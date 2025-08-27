@@ -1,0 +1,30 @@
+
+[build-system]
+requires = ["setuptools>=62", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "beangulp-skandia"
+version = "0.1.0"
+description = "Beangulp importer for XLSX exports from Skandia (Sweden)"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [{name="Martin Dahl", email="martindalh16@icloud.com"}]
+keywords = ["beancount", "beangulp", "importer", "skandia", "xlsx", "sweden"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Office/Business :: Financial",
+]
+
+dependencies = [
+    "beancount>=3.0.0b18",
+    "beangulp>=0.1.0",
+    "pandas>=2.0.0",
+    "openpyxl>=3.1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/martindahlswe/beangulp-skandia"
+Issues = "https://github.com/martindahlswe/beangulp-skandia/issues"

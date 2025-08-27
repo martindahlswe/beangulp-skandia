@@ -1,0 +1,35 @@
+# Example configuration for beangulp-skandia
+# Copy this to `skandia.toml` and adjust to your own accounts.
+
+default_account = "Assets:SE:Skandia:Default"
+currency = "SEK"
+
+# Map Kontonummer -> Beancount account
+# Keys can be raw (with punctuation) or digits-only; both will match.
+[accounts]
+"XXXX-XXX.XXX-X" = "Assets:SE:Skandia:Checking"
+"XXXXXXXXXXXX"   = "Assets:SE:Skandia:Savings"
+
+# Emit balance assertions from the 'Saldo' column
+[balances]
+enabled = true
+granularity = "daily"   # or "file_end"
+
+# Simple keyword rules to classify transactions
+[rules]
+enabled = true
+default_counter = "Equity:Unknown"
+
+[rules.map]
+"SATS"       = "Expenses:Health:Gym"
+"TROSSÖFASTIGHETER" = "Expenses:Rent"
+"UNIONEN"           = "Expenses:Unionen"
+"TELENOR"           = "Expenses:Subscription:Mobile"
+"PRENUMERATION"     = "Expenses:Subscriptions"
+
+# Detect internal transfers
+[transfers]
+enabled = true
+classify_account = "Expenses:Transfers:Internal"
+parse_destination_in_description = true
+keywords = ["överföring", "overforing"]
