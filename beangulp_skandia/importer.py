@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, Iterable, List, Optional, Tuple
 
 import re
 import pandas as pd
@@ -50,12 +50,18 @@ class SkandiaXlsx(Importer):
       enabled = true
       default_counter = "Equity:Unknown"
 
-      [rules.map]      # substring, case-insensitive
-      "MALKARS GYM" = "Expenses:Health:Gym"
+      # Regex rules are applied first, in order.
+      [rules.regex_map]
+      "\\ba[- ]?kassa\\b" = "Expenses:Union:Unemployment"
+      "\\bunionen\\b"     = "Expenses:Union:Membership"
+
+      # Substring rules are applied after regex_map.
+      [rules.map]
+      "MALKARS GYM"       = "Expenses:Health:Gym"
       "TROSSÖFASTIGHETER" = "Expenses:Rent"
-      "UNIONEN" = "Expenses:Professional:Dues"
-      "MOBIL" = "Expenses:Utilities:Mobile"
-      "PRENUMERATION" = "Expenses:Subscriptions"
+      "UNIONEN"           = "Expenses:Professional:Dues"
+      "MOBIL"             = "Expenses:Utilities:Mobile"
+      "PRENUMERATION"     = "Expenses:Subscriptions"
 
       [transfers]
       enabled = true
@@ -79,6 +85,7 @@ class SkandiaXlsx(Importer):
     _rules_enabled: bool = False
     _rules_default_counter: Optional[str] = None
     _rules_map: Dict[str, str] = None  # lowercased substr -> account
+    _rules_regex: List[Tuple[re.Pattern, str]] = None  # compiled regex -> account
     _transfers_enabled: bool = True
     _transfers_classify_account: str = "Expenses:Transfers:Internal"
     _transfers_parse_dest_in_desc: bool = True
@@ -140,19 +147,37 @@ class SkandiaXlsx(Importer):
                         self._balances_granularity = gran
 
                 # Rules (keyword guessing)
+                self._rules_regex = []
                 rules = data.get("rules") or {}
                 if isinstance(rules, dict):
                     self._rules_enabled = bool(rules.get("enabled", False))
                     dc = rules.get("default_counter")
                     self._rules_default_counter = str(dc) if isinstance(dc, str) else None
+
+                    # Substring rules
                     rmap = rules.get("map") or {}
                     if isinstance(rmap, dict):
-                        self._rules_map = {str(k).lower(): str(v) for k, v in rmap.items()
+                        # Store as casefolded substrings for robust Unicode matching.
+                        self._rules_map = {str(k).casefold(): str(v)
+                                           for k, v in rmap.items()
                                            if isinstance(k, str) and isinstance(v, str)}
                     else:
                         self._rules_map = {}
+
+                    # Regex rules (applied before substring rules)
+                    rxmap = rules.get("regex_map") or {}
+                    if isinstance(rxmap, dict):
+                        for pattern, acct in rxmap.items():
+                            if isinstance(pattern, str) and isinstance(acct, str):
+                                try:
+                                    cre = re.compile(pattern, re.IGNORECASE | re.UNICODE)
+                                    self._rules_regex.append((cre, acct))
+                                except re.error:
+                                    # Ignore invalid patterns from config
+                                    pass
                 else:
                     self._rules_map = {}
+                    self._rules_regex = []
 
                 # Transfers
                 transfers = data.get("transfers") or {}
@@ -166,7 +191,7 @@ class SkandiaXlsx(Importer):
                     )
                     kws = transfers.get("keywords") or ["överföring", "överforing", "overforing"]
                     if isinstance(kws, list):
-                        self._transfers_keywords = [str(x).lower() for x in kws if isinstance(x, str)]
+                        self._transfers_keywords = [str(x).casefold() for x in kws if isinstance(x, str)]
                     else:
                         self._transfers_keywords = ["överföring", "överforing", "overforing"]
                 else:
@@ -174,6 +199,7 @@ class SkandiaXlsx(Importer):
         else:
             # No config file: initialize defaults for rules/transfers
             self._rules_map = {}
+            self._rules_regex = []
             self._transfers_keywords = ["överföring", "överforing", "overforing"]
 
         self._config_loaded = True
@@ -207,6 +233,8 @@ class SkandiaXlsx(Importer):
                         data.setdefault("rules", {})[key] = val
                     elif section == "rules.map":
                         data.setdefault("rules", {}).setdefault("map", {})[key] = val
+                    elif section == "rules.regex_map":
+                        data.setdefault("rules", {}).setdefault("regex_map", {})[key] = val
                     elif section == "transfers":
                         data.setdefault("transfers", {})[key] = val
                     elif section is None:
@@ -397,7 +425,7 @@ class SkandiaXlsx(Importer):
     def _looks_like_transfer(self, desc: str) -> bool:
         if not self._transfers_enabled or not desc:
             return False
-        s = desc.lower()
+        s = desc.casefold()
         return any(k in s for k in (self._transfers_keywords or []))
 
     def _resolve_transfer_counter(self, desc: str) -> str:
@@ -428,12 +456,27 @@ class SkandiaXlsx(Importer):
 
     # ---- Rules / counter-account guessing ----
     def _guess_counter_account(self, desc: str) -> Optional[str]:
-        if not self._rules_enabled or not self._rules_map:
+        if not self._rules_enabled:
             return None
-        s = (desc or "").lower()
-        for substr, acct in self._rules_map.items():
-            if substr in s:
-                return acct
+        text = (desc or "").casefold()
+
+        # 1) Regex rules first (in config order).
+        if self._rules_regex:
+            for cre, acct in self._rules_regex:
+                try:
+                    if cre.search(text):
+                        return acct
+                except Exception:
+                    # If a regex blows up, ignore it and continue.
+                    continue
+
+        # 2) Substring rules next.
+        if self._rules_map:
+            for substr, acct in self._rules_map.items():
+                if substr in text:
+                    return acct
+
+        # 3) Fallback default counter (optional).
         return self._rules_default_counter
 
     def extract(
@@ -484,7 +527,7 @@ class SkandiaXlsx(Importer):
                     )
                 )
             else:
-                # 2) Generic keyword rules
+                # 2) Generic rules (regex first, then substr)
                 guessed = self._guess_counter_account(row["desc"])
                 if guessed:
                     postings.append(
