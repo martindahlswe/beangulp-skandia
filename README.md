@@ -25,6 +25,7 @@ beangulp-skandia --config skandia.toml extract  ~/Downloads/skandia.xlsx > out.b
 - Optional balance assertions from the `Saldo` column.
 - Keyword-based counter-account rules (e.g. rent, gym, subscriptions).
 - Internal transfers detection and classification (e.g. “Överföring …”).
+- Regex-based rules for more precise matching (e.g. distinguish “Unionen” vs “Unionens A-Kassa”).
 - Configurable via a simple `skandia.toml`.
 - Provides a CLI entrypoint: `beangulp-skandia`.
 - **Optional machine learning enrichment via [`smart_importer`](https://github.com/beancount/smart_importer)**:
@@ -94,6 +95,10 @@ granularity = "daily"   # or "file_end"
 [rules]
 enabled = true
 default_counter = "Equity:Unknown"
+
+[rules.regex_map]
+"\\ba[- ]?kassa\\b" = "Expenses:Union:Unemployment"
+"\\bunionen\\b"     = "Expenses:Union:Membership"
 
 [rules.map]
 "SATS"                  = "Expenses:Health:Gym"
